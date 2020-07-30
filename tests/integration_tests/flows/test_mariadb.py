@@ -1,24 +1,15 @@
 import unittest
 import csv
 import inspect
-import subprocess
-import atexit
 
 import mysql.connector
 
-from mindsdb.interfaces.native.mindsdb import MindsdbNative
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.utilities.config import Config
 
 from common import (
+    run_environment,
     get_test_csv,
-    wait_api_ready,
-    prepare_config,
-    wait_db,
-    is_container_run,
-    TEST_CONFIG,
-    TESTS_ROOT,
-    OUTPUT
+    TEST_CONFIG
 )
 
 TEST_CSV = {
@@ -54,47 +45,11 @@ def query(q, as_dict=False):
     return res
 
 
-def stop_mariadb():
-    maria_sp = subprocess.Popen(
-        ['./cli.sh', 'mariadb-stop'],
-        cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-        stdout=OUTPUT,
-        stderr=OUTPUT
-    )
-    maria_sp.wait()
-
-
 class MariaDBTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        temp_config_path = prepare_config(config, 'default_mariadb')
-
-        if is_container_run('mariadb-test') is False:
-            subprocess.Popen(
-                ['./cli.sh', 'mariadb'],
-                cwd=TESTS_ROOT.joinpath('docker/').resolve(),
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(stop_mariadb)
-        maria_ready = wait_db(config, 'default_mariadb')
-
-        if maria_ready:
-            sp = subprocess.Popen(
-                ['python3', '-m', 'mindsdb', '--api', 'mysql', '--config', temp_config_path],
-                stdout=OUTPUT,
-                stderr=OUTPUT
-            )
-            atexit.register(sp.kill)
-
-        api_ready = maria_ready and wait_api_ready(config)
-
-        if maria_ready is False or api_ready is False:
-            print(f'Failed by timeout. MariaDB started={maria_ready}, MindsDB started={api_ready}')
-            raise Exception()
-
-        cls.mdb = MindsdbNative(config)
-        datastore = DataStore(config)
+        mdb, datastore = run_environment('mariadb', config)
+        cls.mdb = mdb
 
         models = cls.mdb.get_models()
         models = [x['name'] for x in models]
