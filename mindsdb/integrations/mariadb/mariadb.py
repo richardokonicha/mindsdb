@@ -34,7 +34,7 @@ class Mariadb():
                 if name in predicted_cols:
                     column_declaration.append(f' `{name}_original` {new_type} ')
             except Exception:
-                print(f'Error: cant convert type {col_subtype} of column {name} to mariadb tpye')
+                print(f'Error: cant convert type {col_subtype} of column {name} to mariadb type')
 
         return column_declaration
 
@@ -42,7 +42,12 @@ class Mariadb():
         return '`' + name.replace('`', '``') + '`'
 
     def _query(self, query):
-        con = mysql.connector.connect(host=self.config['integrations'][self.name]['host'], port=self.config['integrations'][self.name]['port'], user=self.config['integrations'][self.name]['user'], password=self.config['integrations'][self.name]['password'])
+        con = mysql.connector.connect(
+            host=self.config['integrations'][self.name]['host'],
+            port=self.config['integrations'][self.name]['port'],
+            user=self.config['integrations'][self.name]['user'],
+            password=self.config['integrations'][self.name]['password']
+        )
 
         cur = con.cursor(dictionary=True, buffered=True)
         cur.execute(query)
@@ -103,6 +108,7 @@ class Mariadb():
             name = model_meta['name']
             stats = model_meta['data_analysis']
             columns_sql = ','.join(self._to_mariadb_table(stats, model_meta['predict']))
+            columns_sql += ',`when_data` varchar(500)'
             columns_sql += ',`select_data_query` varchar(500)'
             columns_sql += ',`external_datasource` varchar(500)'
             for col in model_meta['predict']:
