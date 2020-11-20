@@ -27,26 +27,47 @@ jobs:
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
-          cd tests/docker
-          docker-compose -f docker-compose.yml up -d
-          cd ../..
+          mkdir -p ~/.ssh/
+          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          sudo chmod 600 ~/.ssh/db_machine
+          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+          sudo chmod 644 ~/.mindsdb_credentials.json
+
           pip install -r requirements_test.txt
-          # maybe use TestSuite addTest
-          python tests/integration_tests/flows/test_custom_model.py
-          python tests/integration_tests/flows/test_clickhouse.py
-          python tests/integration_tests/flows/test_mariadb.py
-          python tests/integration_tests/flows/test_mysql.py
-          python tests/integration_tests/flows/test_postgres.py
+
+          export USE_EXTERNAL_DB_SERVER="1"
+
+          # MongoDB
+          echo -e "\n===============\ntest MongoDB\n===============\n"
           python tests/integration_tests/flows/test_mongo.py
-          sleep 61
+
+          # PostgreSQL
+          echo -e "\n===============\ntest PostgreSQL\n===============\n"
+          python tests/integration_tests/flows/test_postgres.py
+
+          # MySQL
+          echo -e "\n===============\ntest MySQL\n===============\n"
+          python tests/integration_tests/flows/test_mysql.py
+
+          # MariaDB
+          echo -e "\n===============\ntest MariaDB\n===============\n"
+          python tests/integration_tests/flows/test_mariadb.py
+
+          # ClickHouse
+          echo -e "\n===============\ntest ClickHouse\n===============\n"
+          python tests/integration_tests/flows/test_clickhouse.py
+
+          # Cutsom model
+          echo -e "\n===============\ntest Cutsom model\n===============\n"
+          python tests/integration_tests/flows/test_custom_model.py
+
           python tests/integration_tests/api/test_http.py
-          cd tests/docker
-          docker-compose down
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-
+        DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+        DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
   deploy_windows_installer:
     runs-on: windows-latest
     needs: test
@@ -66,7 +87,7 @@ jobs:
       run: |
         pip install pyinstaller
         pip install winshell
-        python distributions/windows/build_installers.py
+        python distributions/windows/build_installers.py beta
 
     - name: Sync windows installer to s3
       env:
@@ -103,20 +124,25 @@ jobs:
         python setup.py sdist
         twine upload dist/*
 
+    - name: Install latest version from pypi
+      run: |
+        sleep 20
+        pip install mindsdb
+
     - name: Build and push mindsdb Docker image
       uses: docker/build-push-action@v1
       with:
         dockerfile: distributions/docker/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: mindsdb/mindsdb
+        repository: mindsdb/mindsdb_beta
         tag_with_ref: true
 
-    - name: Rename linux installer
+    - name: Build linux sh installer
       run: |
-        python distributions/linux/rename_installer.py
+        python distributions/linux/rename_installers.py beta
 
-    - name: Sync linux installer to s3
+    - name: Sync linux sh installer to s3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks
@@ -127,3 +153,19 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/linux/dist'
         DEST_DIR: 'mindsdb-installer/linux'
+
+    - name: Build OSX sh installer
+      run: |
+        python distributions/osx/rename_installers.py beta
+
+    - name: Sync linux sh installer to s3
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read --follow-symlinks
+      env:
+        AWS_S3_BUCKET: 'mindsdb-installer'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-2'
+        SOURCE_DIR: 'distributions/osx/dist'
+        DEST_DIR: 'mindsdb-installer/osx'
