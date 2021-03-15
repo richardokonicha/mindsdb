@@ -1,7 +1,9 @@
 # @TODO, replace with arrow later: https://mirai-solutions.ch/news/2020/06/11/apache-arrow-flight-tutorial/
+import xmlrpc
+from xmlrpc.server import SimpleXMLRPCServer
 from dateutil.parser import parse as parse_datetime
 import os
-import ray
+import pickle
 
 from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.database.database import DatabaseWrapper
@@ -9,25 +11,8 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsSotre
 from mindsdb.utilities.log import log
 
-
-@ray.remote
 class ModelController():
-    def load_dep(self):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
-
-
     def __init__(self):
-        from mindsdb_datasources import FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS, SnowflakeDS, AthenaDS
-        import mindsdb_native
-        from mindsdb_native import F
-        from mindsdb_native.libs.constants.mindsdb import DATA_SUBTYPES
-        from mindsdb.interfaces.storage.db import session, Predictor
-
-
         self.config = Config()
         self.fs_store = FsSotre()
         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -157,7 +142,8 @@ class ModelController():
         from mindsdb_native import F
 
         ds = eval(ds['class'])(*ds['args'], **ds['kwargs'])
-        return F.analyse_dataset(ds)
+        analysis =  F.analyse_dataset(ds)
+        return xmlrpc.client.Binary(pickle.dumps(analysis))
 
     def get_model_data(self, name, db_fix=True):
         from mindsdb_native import F
@@ -188,8 +174,7 @@ class ModelController():
                     data_analysis[column]['typing'] = {
                         'data_subtype': DATA_SUBTYPES.INT
                     }
-
-        return model
+        return xmlrpc.client.Binary(pickle.dumps(model))
 
     def get_models(self):
         from mindsdb.interfaces.storage.db import session, Predictor
@@ -223,7 +208,7 @@ class ModelController():
             except Exception as e:
                 print(f"Can't list data for model: '{model_name}' when calling `get_models(), error: {e}`")
 
-        return models
+        return xmlrpc.client.Binary(pickle.dumps(models))
 
     def delete_model(self, name):
         from mindsdb_native import F
@@ -237,3 +222,20 @@ class ModelController():
         F.delete_model(name)
         self.dbw.unregister_predictor(name)
         self.fs_store.delete(f'predictor_{self.company_id}_{id}')
+
+def ping(): return True
+
+def start():
+    controller = ModelController()
+    server = SimpleXMLRPCServer(("localhost", 17329))
+
+    server.register_function(controller.create, "create")
+    server.register_function(controller.learn, "learn")
+    server.register_function(controller.predict, "predict")
+    server.register_function(controller.analyse_dataset, "analyse_dataset")
+    server.register_function(controller.get_model_data, "get_model_data")
+    server.register_function(controller.get_models, "get_models")
+    server.register_function(controller.delete_model, "delete_model")
+    server.register_function(ping, "ping")
+
+    server.serve_forever()
