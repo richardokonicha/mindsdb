@@ -2,23 +2,23 @@
 
 Modern agriculture is becoming very dependent on technology. From advanced machinery to specially selected crops. All the technology produces a lot of data that can be used for better adjustment of the farming process. One use case of machine learning in agriculture could be the selection of the best crop for a specific field to maximize the potential yield. Such problems are often called *Classification Problems* in machine learning. With **MindsDB** you can easily make automated machine learning predictions straight from your existing database. Even without advanced ML engineering skills, you can start leveraging predictive models that help you make better business decisions.
 
-In this tutorial you will learn how to predict the best crop type based on field parameters using **MindsDB** and **MariaDB**.
+In this tutorial, you will learn how to predict the best crop type based on field parameters using **MindsDB** and **MariaDB**.
 
 ## Pre-requisites
 
 Before you start make sure you have:
 
 1. Access to MindsDB. Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
-2. Access to a MariaDB database. You can install it [locally](https://mariadb.org/download/) or through [Docker](https://hub.docker.com/_/mariadb).
+2. Access to a database. In this example we will use MariaDB. You can install it [locally](https://mariadb.org/download/) or through [Docker](https://hub.docker.com/_/mariadb).
 3. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset).
-4. Access to mysql-client. You can probably get it from your systems package manager. For Debian/Ubuntu check [here](https://packages.ubuntu.com/search?keywords=mysql-client).
+4. Access to mysql-client. You can probably get it from your system’s package manager. For Debian/Ubuntu check [here](https://packages.ubuntu.com/search?keywords=mysql-client).
 4. Optional: Access to ngrok. You can check the installation details at the [ngrok website](https://ngrok.com/).
 
 ## Setup the database
 
-In this section you will create a MariaDB database and a table into which you will then load the dataset.
+In this section, you will create a MariaDB database and a table into which you will then load the dataset.
 
-First connect to your MariaDB instance. You can use the CLI based `mysql` or any manager like [DBeaver](https://dbeaver.io/).
+First, connect to your MariaDB instance. You can use the CLI based `mysql` or any manager like [DBeaver](https://dbeaver.io/).
 
 If you have MariaDB running locally, you can use the following line to connect.
 
@@ -127,8 +127,8 @@ The recommended way of connecting a database to MindsDB is through its GUI. In t
 
 Since our MariaDB instance is local we will use `ngrok` to make it available to MindsDB Cloud. If you are using a MariaDB instance that already has a public address or you have installed MindsDB locally you can skip this step.
 
-First you need to setup an ngrok tunnel with the following command.
-> If you have used a diffrent port for your MariaDB installation, remember to change it here.
+First you need to set up an ngrok tunnel with the following command.
+> If you have used a different port for your MariaDB installation, remember to change it here.
 
 ```bash
 ngrok tcp 3306
@@ -181,7 +181,7 @@ FROM crops_integration (
 ) PREDICT label as crop_type;
 ```
 
-After creating the predictor you should se a similar output:
+After creating the predictor you should see a similar output:
 
 ```console
 Query OK, 0 rows affected (11.66 sec)
