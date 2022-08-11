@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 import json
 import requests
-import traceback
 from datetime import datetime
 
 import pandas as pd
