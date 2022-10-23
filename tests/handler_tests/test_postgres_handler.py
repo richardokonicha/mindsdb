@@ -15,15 +15,15 @@ HANDLER_KWARGS = {"connection_data": {
 }
 
 def waitReadiness(container, timeout=30):
-    logs_inter = container.logs(stream=True)
     threshold = time.time() + timeout
-    ready_event_num = 0
+    ready_msg = "database system is ready to accept connections"
     while True:
-        line = logs_inter.next().decode()
-        if "database system is ready to accept connections" in line:
-            ready_event_num +=1
-            if ready_event_num > 1:
-                break
+        lines = container.logs().decode()
+        # container fully ready
+        # because it reloads the db server during initialization
+        # need to check that the 'ready for connections' has found second time
+        if lines.count(ready_msg) > 1:
+            break
         if time.time() > threshold:
             raise Exception("timeout exceeded, container is still not ready")
 
@@ -36,17 +36,24 @@ def handler(request):
         command = "-c ssl=on -c ssl_cert_file=/var/lib/.postgresql/server.crt -c ssl_key_file=/var/lib/.postgresql/server.key"
     else:
         command = None
-    db_container = docker_client.containers.run(
-                image_name,
-                command=command,
-                detach=True,
-                environment={"POSTGRES_PASSWORD":"supersecret"},
-                ports={"5432/tcp": 15432},
-            )
-    waitReadiness(db_container)
+    container = None
+    try:
+        container = docker_client.containers.run(
+                    image_name,
+                    command=command,
+                    detach=True,
+                    environment={"POSTGRES_PASSWORD":"supersecret"},
+                    ports={"5432/tcp": 15432},
+                )
+        waitReadiness(container)
+    except Exception as e:
+        if container is not None:
+            container.kill()
+        raise e
+
     handler = PostgresHandler('test_postgres_handler', **HANDLER_KWARGS)
     yield handler
-    db_container.kill()
+    container.kill()
     docker_client.close()
 
 class TestPostgresHandler:
