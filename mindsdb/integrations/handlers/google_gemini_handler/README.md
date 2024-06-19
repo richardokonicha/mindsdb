@@ -1,40 +1,74 @@
-# Google Gemini Handler
-The Google Gemini ML handler integrates the google-gen-ai library from Google's Generative AI with MindsDB. You can use it to generate text completions with the Gemini Pro model for your existing text data.
+---
+title: Google Gemini
+sidebarTitle: Google Gemini
+---
 
-## Google Generative AI (Google Gemini)
-Google Generative AI is a library that provides access to powerful language models for text generation. More information about the Google Generative AI library can be found [here](https://github.com/GoogleCloudPlatform/generative-ai).
+This documentation describes the integration of MindsDB with [Google Gemini](<link>), a generative artificial intelligence model developed by Google.
+The integration allows for the deployment of Google Gemini models within MindsDB, providing the models with access to data from various data sources.
 
-*Note:* Ensure you have the necessary API key for accessing the Google gen AI library. You can get your API key at https://makersuite.google.com/. 
+## Prerequisites
 
-# Example Usage
+Before proceeding, ensure the following prerequisites are met:
 
-Create a ML Engine with the new `google_gemini` engine.
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Google Gemini within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the Google Gemini API key required to deploy and use Google Gemini models within MindsDB. Follow the [instructions for obtaining the API key](https://ai.google.dev/gemini-api/docs/api-key).
+
+## Setup
+
+Create an AI engine from the [Google Gemini handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/google_gemini_handler).
 
 ```sql
-CREATE ML_ENGINE gemini_engine
+CREATE ML_ENGINE google_gemini_engine
 FROM google_gemini
 USING
-  google_gemini_api_key = 'google_gemini_api_key';
+      google_gemini_api_key = 'api-key-value';
 ```
 
+Create a model using `google_gemini_engine` as an engine.
+
 ```sql
-CREATE MODEL mindsdb.Google_Gemini_test
+CREATE MODEL google_gemini_model
+PREDICT target_column
+USING
+      engine = 'google_gemini_engine',  -- engine name as created via CREATE ML_ENGINE
+      column = 'input_column',          -- column name that stores user input
+      model = 'gemini-pro';             -- model name to be used
+```
+
+## Usage
+
+The following usage examples utilize `google_gemini_engine` to create a model with the `CREATE MODEL` statement.
+
+Create a model to generate text completions with the Gemini Pro model for your existing text data.
+
+```sql
+CREATE MODEL google_gemini_model
 PREDICT answer
 USING
-  column = 'question',
-  engine = 'gemini_engine',
-  google_gemini_api_key = 'google_gemini_api_key',
-  model = 'gemini-pro'
+      engine = 'google_gemini_engine',
+      column = 'question',
+      model = 'gemini-pro';
 ```
+
+Query the model to get predictions.
 
 ```sql
 SELECT question, answer
-FROM mindsdb.Google_Gemini_test
-WHERE question = 'What is the meaning of life?';
+FROM google_gemini_model
+WHERE question = 'How are you?';
 ```
+
+Alternatively, you can query for batch predictions:
 
 ```sql
 SELECT t.question, m.answer
-FROM mindsdb.Google_Gemini_test as m
-JOIN files.question_table as t;
+FROM google_gemini_model AS m
+JOIN data_table AS t;
 ```
+
+<Tip>
+**Next Steps**
+
+Go to the [Use Cases](/use-cases/overview) section to see more examples.
+</Tip>
