@@ -42,8 +42,6 @@ mindsdb/integrations/handlers/autokeras_handler/structured_data_classifier
 AutogluonModels
 
 # VisualStudioCode
-.vscode
-.vscode/*
 .history
 doc/lib/
 run.csh
@@ -67,3 +65,7 @@ mindsdb/**/uv.lock
 
 # dsi tests
 reports/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
